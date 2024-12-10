@@ -8,6 +8,7 @@ dependencies = [
     "dlt>=1.4.1",
     "duckdb>=1.1.3",
     "pandas>=2.2.3",
+    "python-dotenv>=1.0.1",
     "streamlit>=1.40.2",
 ]
 
