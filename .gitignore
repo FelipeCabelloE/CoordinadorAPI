@@ -1,2 +1,4 @@
 .venv
 DATA
+.dlt/secrets.toml
+
