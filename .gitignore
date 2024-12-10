@@ -1,4 +1,4 @@
 .venv
 DATA
 .dlt/secrets.toml
-
+*.duckdb
