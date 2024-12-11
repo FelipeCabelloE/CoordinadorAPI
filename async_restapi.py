@@ -1,7 +1,5 @@
-
-
 import asyncio
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import List, Optional
 
 import dlt
@@ -10,16 +8,17 @@ import httpx
 import pandas as pd
 from pydantic import BaseModel, ValidationError
 from rich import print
-
-
+from tenacity import retry, retry_if_exception_type, stop_after_attempt
 
 # Example REST API endpoint and headers
 API_URL = "https://sipub.api.coordinador.cl:443/costo-marginal-real/v4/findByDate"
 
 # Request configuration
-START_DATE = "2024-06-01"
-END_DATE = "2024-06-05"
-PAGE_LIMIT = 10000  # Number of records per page for testing purposes
+
+today = datetime.today()
+START_DATE = (today - timedelta(days=123)).strftime("%Y-%m-%d")
+END_DATE = (today - timedelta(days=120)).strftime("%Y-%m-%d")
+PAGE_LIMIT = 1000  # Number of records per page for testing purposes
 USER_KEY = dlt.secrets["sources.rest_api.coordinador_sip_token"]
 # Define Pydantic models for data validation
 
@@ -50,6 +49,9 @@ semaphore = asyncio.Semaphore(10)
 
 
 # Function to fetch a single page of data
+
+
+@retry(retry=retry_if_exception_type(httpx.HTTPError), stop=stop_after_attempt(4))
 async def fetch_data(
     client: httpx.AsyncClient, start_date, end_date, page, limit, api_key
 ):
@@ -61,13 +63,15 @@ async def fetch_data(
             "limit": limit,
             "user_key": api_key,
         }
-        try:
-            response = await client.get(API_URL, params=params)
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as e:
-            print(f"Error fetching data for page {page}: {e}")
-            return None
+        # try:
+        print(f"Fetching page {page}")
+        response = await client.get(API_URL, params=params)
+        response.raise_for_status()
+        print(f"success for page {page}")
+        return response.json()
+        # except httpx.TimeoutException as e:
+        #     print(f"Error fetching data for page {page}: {e}")
+        #     return e
 
 
 # Function to fetch all pages dynamically
