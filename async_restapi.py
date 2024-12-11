@@ -8,7 +8,12 @@ import httpx
 import pandas as pd
 from pydantic import BaseModel, ValidationError
 from rich import print
-from tenacity import retry, retry_if_exception_type, stop_after_attempt
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 # Example REST API endpoint and headers
 API_URL = "https://sipub.api.coordinador.cl:443/costo-marginal-real/v4/findByDate"
@@ -16,8 +21,8 @@ API_URL = "https://sipub.api.coordinador.cl:443/costo-marginal-real/v4/findByDat
 # Request configuration
 
 today = datetime.today()
-START_DATE = (today - timedelta(days=123)).strftime("%Y-%m-%d")
-END_DATE = (today - timedelta(days=120)).strftime("%Y-%m-%d")
+START_DATE = (today - timedelta(days=32)).strftime("%Y-%m-%d")
+END_DATE = (today - timedelta(days=2)).strftime("%Y-%m-%d")
 PAGE_LIMIT = 1000  # Number of records per page for testing purposes
 USER_KEY = dlt.secrets["sources.rest_api.coordinador_sip_token"]
 # Define Pydantic models for data validation
@@ -45,14 +50,18 @@ class APIResponse(BaseModel):
     limit: int
 
 
-semaphore = asyncio.Semaphore(10)
+semaphore = asyncio.Semaphore(100)
 
 
 # Function to fetch a single page of data
 
 
 # TODO improve function to incorporate error handling
-@retry(retry=retry_if_exception_type(httpx.HTTPError), stop=stop_after_attempt(4))
+@retry(
+    retry=retry_if_exception_type(httpx.RequestError),
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+)
 async def fetch_data(
     client: httpx.AsyncClient, start_date, end_date, page, limit, api_key
 ):
@@ -64,12 +73,25 @@ async def fetch_data(
             "limit": limit,
             "user_key": api_key,
         }
-        # try:
-        print(f"Fetching page {page}")
-        response = await client.get(API_URL, params=params)
-        response.raise_for_status()
-        print(f"success for page {page}")
-        return response.json()
+        try:
+            print(f"Fetching page {page}")
+            response = await client.get(API_URL, params=params, timeout=60)
+            response.raise_for_status()
+            print(f"success for page {page}")
+            return response.json()
+        except httpx.RequestError as e:
+            print(
+                f"HTTP Request Error on page {page} (will retry):", type(e).__name__, e
+            )
+            raise  # Re-raise to trigger retry
+        except httpx.HTTPStatusError as e:
+            print(f"HTTP Status Error on page {page}: {e.response.status_code}")
+            print("Response content:", e.response.text)
+            # Do not retry on HTTP status errors, unless you explicitly want to.
+            return None
+        except Exception as e:
+            print(f"Unexpected error on page {page}:", e)
+            return None
         # except httpx.TimeoutException as e:
         #     print(f"Error fetching data for page {page}: {e}")
         #     return e
