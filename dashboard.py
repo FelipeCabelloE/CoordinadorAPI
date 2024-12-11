@@ -6,7 +6,7 @@ import streamlit as st
 # Load the DuckDB file
 def load_data(file_path):
     con = duckdb.connect(file_path)
-    query = "SELECT fecha_hora, cmg_clp_kwh_, barra_info FROM api_data;"
+    query = "SELECT fecha_hora, cmg_clp_kwh_, cmg_usd_mwh_, barra_info FROM api_data;"
     df = con.execute(query).fetch_df()
     con.close()
     return df
@@ -26,12 +26,17 @@ data["barra_info"] = data["barra_info"].astype("category")
 barra_options = data["barra_info"].unique()
 selected_barra = st.sidebar.selectbox("Select Barra Info", options=barra_options)
 
+timeseries_options = ["cmg_clp_kwh_", "cmg_usd_mwh_"]
+
+selected_timeseries = st.sidebar.selectbox(
+    "Select timeseries", options=timeseries_options
+)
 # Filter data based on selected "barra_info"
 filtered_data = data[data["barra_info"] == selected_barra]
 
 
 # Resample data to hourly granularity
-numeric_columns = ["cmg_clp_kwh_"]
+numeric_columns = ["cmg_clp_kwh_", "cmg_usd_mwh_"]
 filtered_data = (
     filtered_data.set_index("fecha_hora")[numeric_columns]
     .resample("h")
@@ -40,9 +45,11 @@ filtered_data = (
 )
 
 # Main dashboard
-st.title("CMG CLP/kWh Time Series Dashboard")
+st.title("Precio Marginal Real - Serie de tiempo")
 
-st.write(f"Displaying data for: **{selected_barra}**")
+st.write(
+    f"Ested esta viendo la subestación: **{selected_barra}** con datos de **{selected_timeseries}**"
+)
 
 # Plot the time series
-st.line_chart(filtered_data.set_index("fecha_hora")["cmg_clp_kwh_"])
+st.line_chart(filtered_data.set_index("fecha_hora")[selected_timeseries])
