@@ -1,3 +1,5 @@
+# TODO Fix this whole damn thing, is very slow and doesnt seem to be working as intended
+
 from typing import Any, Optional
 
 import dlt
@@ -5,9 +7,7 @@ from dlt.common.pendulum import pendulum
 from dlt.sources.helpers.rest_client.paginators import PageNumberPaginator
 from dlt.sources.rest_api import (
     RESTAPIConfig,
-    check_connection,
     rest_api_resources,
-    rest_api_source,
 )
 
 

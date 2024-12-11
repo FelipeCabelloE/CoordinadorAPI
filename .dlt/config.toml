@@ -1,7 +1,7 @@
 # put your configuration values here
 
 [runtime]
-log_level="INFO"  # the system log level of dlt
+log_level = "INFO" # the system log level of dlt
 # use the dlthub_telemetry setting to enable/disable anonymous usage data reporting, see https://dlthub.com/docs/reference/telemetry
 dlthub_telemetry = false
 
@@ -9,3 +9,11 @@ dlthub_telemetry = false
 # resources = ["a", "b", "c"] # please set me up!
 #[sources.rest_api.client] # please set me up!
 #key = "value"
+[extract]
+# use 2 workers to extract sources in parallel
+workers = 4
+# allow 10 async items to be processed in parallel
+max_parallel_items = 20
+
+[load]
+workers = 10
