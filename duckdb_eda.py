@@ -7,6 +7,7 @@ def main():
     result = db.execute("SELECT * FROM api_data").fetch_df()
     description = result.describe()
     print(description)
+    print(result)
 
 
 if __name__ == "__main__":
