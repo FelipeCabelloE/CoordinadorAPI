@@ -51,6 +51,7 @@ semaphore = asyncio.Semaphore(10)
 # Function to fetch a single page of data
 
 
+# TODO improve function to incorporate error handling
 @retry(retry=retry_if_exception_type(httpx.HTTPError), stop=stop_after_attempt(4))
 async def fetch_data(
     client: httpx.AsyncClient, start_date, end_date, page, limit, api_key
